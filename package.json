@@ -1,19 +1,23 @@
 {
+  "name": "app-amigos-fc",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.2.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@supabase/supabase-js": "latest",
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.17",
-    "postcss": "^8.5.3",
-    "autoprefixer": "^10.4.20"
+    "tailwindcss": "latest",
+    "postcss": "latest",
+    "autoprefixer": "latest"
   }
 }
