@@ -1,0 +1,7 @@
+Ajustes aplicados:
+- Nome do app sem quebrar linha.
+- Topo com ícones no padrão solicitado.
+- Navegação horizontal: Início, Jogadores, Times, Caixa, Segurança.
+- Notificações com abas clicáveis funcionando.
+- Removido card-grid poluído do menu principal quando o header já possui navegação.
+- Ajustes para mobile premium.

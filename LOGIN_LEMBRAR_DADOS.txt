@@ -1,0 +1,6 @@
+Login atualizado:
+- Removida toda a parte de biometria.
+- Mantida apenas a opção "Lembrar meus dados".
+- O app salva somente o e-mail/local de login no aparelho.
+- A senha não é salva em texto puro.
+- A sessão do Supabase continua funcionando normalmente quando o usuário permanece logado.

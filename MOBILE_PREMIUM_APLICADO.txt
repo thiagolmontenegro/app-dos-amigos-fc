@@ -1,0 +1,16 @@
+Mobile Premium aplicado no app real.
+
+Alterações:
+- Header premium com ícones clicáveis.
+- Push sempre oculto como botão grande; notificações no sino.
+- Atleta não vê Push/Níveis.
+- Menu Admin em cards premium.
+- Dashboard Admin premium.
+- Dashboard Atleta premium.
+- Pagamento de goleiro mostra ISENTO.
+- Card do atleta mostra Ranking do mês para linha e Jogos no mês para goleiro.
+- Lista ativa priorizada abaixo do painel do atleta.
+- Central de notificações virou modal premium no sino.
+- Tela Segurança redesenhada com cards e ações organizadas.
+
+Pronto para subir no GitHub.
