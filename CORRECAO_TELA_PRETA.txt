@@ -1,2 +1,0 @@
-Correção: inseridos componentes Premium que estavam sendo chamados após o login e causavam tela preta.
-Versão 4.6.1.
