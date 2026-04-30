@@ -117,6 +117,8 @@ function AppDosAmigosFC() {
   const [gameDate, setGameDate] = useState(new Date().toISOString().slice(0, 10));
   const [gameTime, setGameTime] = useState("20:00");
   const [gameLocation, setGameLocation] = useState("");
+  const [listDeadline, setListDeadline] = useState("");
+  const [nowTick, setNowTick] = useState(Date.now());
 
   const [teamCount, setTeamCount] = useState(2);
   const [teamNames, setTeamNames] = useState(["Azul", "Laranja", "Sem colete"]);
@@ -160,6 +162,24 @@ function AppDosAmigosFC() {
     const matchStatus = screen === "players" || statusFilter === "todos" || p.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const listDeadlineMs = listDeadline ? new Date(listDeadline).getTime() : null;
+  const listExpired = !!(listActive && listDeadlineMs && nowTick > listDeadlineMs);
+  const listCanReceiveStatus = listActive && !listLocked && !listExpired;
+
+  function formatCountdown() {
+    if (!listActive) return "Nenhuma lista ativa";
+    if (!listDeadlineMs) return "Sem prazo definido";
+    const diff = listDeadlineMs - nowTick;
+    if (diff <= 0) return "Tempo encerrado";
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `${days}d ${hours}h ${minutes}min`;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
 
   function notifyListChange(message) {
     setNotice(message);
@@ -213,6 +233,7 @@ function AppDosAmigosFC() {
       setListLocked(!!settingsRes.data.list_locked);
       setGameTime(settingsRes.data.game_time || "20:00");
       setGameLocation(settingsRes.data.game_location || "");
+      setListDeadline(settingsRes.data.list_deadline || "");
     }
 
     const paymentMap = {};
@@ -227,6 +248,11 @@ function AppDosAmigosFC() {
   }, []);
 
   useEffect(() => { loadAll(); }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -377,6 +403,7 @@ function AppDosAmigosFC() {
       list_locked: patch.listLocked ?? listLocked,
       game_time: patch.gameTime ?? gameTime,
       game_location: patch.gameLocation ?? gameLocation,
+      list_deadline: patch.listDeadline ?? listDeadline,
     }));
   }
 
@@ -563,18 +590,41 @@ function AppDosAmigosFC() {
     setListLocked(false);
     setScreen("home");
 
-    await saveSettings({ listActive: true, listLocked: false });
+    await saveSettings({ listActive: true, listLocked: false, listDeadline });
     await dbCall(() => supabase.from("players").upsert(reset));
 
     notifyListChange("Lista aberta. Todos voltaram para pendente.");
   }
 
-  async function closeList() {
+  async function toggleListLock() {
     if (!isAdmin) return notifyListChange("Ação permitida somente para Admin.");
-    if (!window.confirm("Tem certeza que deseja fechar/bloquear a lista?")) return;
-    setListLocked(true);
-    await saveSettings({ listActive: true, listLocked: true });
-    notifyListChange("Lista BLOQUEADA para novas entradas.");
+
+    const nextLocked = !listLocked;
+    const action = nextLocked ? "bloquear" : "desbloquear";
+
+    if (!window.confirm(`Tem certeza que deseja ${action} a lista?`)) return;
+
+    setListLocked(nextLocked);
+    await saveSettings({ listActive: true, listLocked: nextLocked });
+    notifyListChange(nextLocked ? "Lista BLOQUEADA para novas entradas." : "Lista DESBLOQUEADA para novas entradas.");
+  }
+
+  async function removeList() {
+    if (!isAdmin) return notifyListChange("Ação permitida somente para Admin.");
+    if (!window.confirm("Tem certeza que deseja remover a lista atual? Os status serão zerados e será necessário abrir uma nova lista.")) return;
+
+    const reset = players.map((p) => ({ ...p, status: "pendente", updated_at: 0 }));
+    setPlayers(reset);
+    setListActive(false);
+    setListLocked(false);
+    setListDeadline("");
+    setTeams(null);
+    setInitial([]);
+
+    await saveSettings({ listActive: false, listLocked: false, listDeadline: "" });
+    await dbCall(() => supabase.from("players").upsert(reset));
+
+    notifyListChange("Lista removida. Abra uma nova lista para receber confirmações.");
   }
 
   function getPlayerListPosition(playerId) {
@@ -812,7 +862,7 @@ function AppDosAmigosFC() {
       {!listActive ? <div className="text-center py-10"><p className="text-3xl font-black">Nenhuma lista ativa</p><p className="text-zinc-400 mt-2">Aguardando o Admin abrir a lista do próximo jogo.</p></div> : <div className="space-y-5">
         <div className="bg-zinc-950 border border-emerald-800 rounded-3xl p-5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-zinc-800 pb-4 mb-4">
-            <div><div className={`inline-flex items-center gap-3 rounded-2xl px-4 py-3 border ${listLocked ? "bg-red-950/50 border-red-700" : "bg-emerald-950/50 border-emerald-700"}`}><span className="text-3xl">{listLocked ? "⛔" : "🟢"}</span><h2 className="text-2xl font-black">{listLocked ? "Lista BLOQUEADA para novas entradas" : "Lista ABERTA"} - {listDate}</h2></div><p className="text-zinc-300 mt-3 text-lg">📍 {gameLocation || "Local não informado"} • 🕒 {gameTime}</p></div>
+            <div><div className={`inline-flex items-center gap-3 rounded-2xl px-4 py-3 border ${listLocked ? "bg-red-950/50 border-red-700" : "bg-emerald-950/50 border-emerald-700"}`}><span className="text-3xl">{listLocked ? "⛔" : "🟢"}</span><h2 className="text-2xl font-black">{listLocked ? "Lista BLOQUEADA para novas entradas" : "Lista ABERTA"} - {listDate}</h2></div><p className="text-zinc-300 mt-3 text-lg">📍 {gameLocation || "Local não informado"} • 🕒 {gameTime}</p><p className={listExpired ? "text-red-400 mt-2 font-black" : "text-emerald-400 mt-2 font-black"}>⏳ Lista aberta até: {listDeadline ? new Date(listDeadline).toLocaleString("pt-BR") : "sem prazo"} • {formatCountdown()}</p></div>
             <div className="text-xs text-zinc-400 bg-zinc-900 rounded-2xl p-3"><p>⚽ Quem vai no jogo</p><p>🍖⚽ Jogo + Resenha</p><p>🍖 Só Resenha</p></div>
           </div>
           <div className="space-y-2 font-mono text-sm md:text-base">{mainSlotPlayers.map((p, i) => <div key={i} className="flex items-center gap-2 bg-zinc-900/70 rounded-xl px-3 py-2"><span className="w-8 shrink-0">{i + 1}-</span><span className="w-7 shrink-0">{i < 2 ? "🥅" : ""}</span><span className="font-bold">{p ? displayName(p) : ""}</span>{p && <span>{statusEmoji(p)}</span>}{p && <span className="text-xs text-zinc-400 ml-2">{formatDateTime(p.updated_at)}</span>}</div>)}</div>
@@ -836,11 +886,17 @@ function AppDosAmigosFC() {
           </div>
         )}
 
-        {listActive && !listLocked && (
+        {listActive && !listLocked && !listExpired && (
           <div className={mainGamePlayers.length >= 14 ? "bg-yellow-950/50 border border-yellow-700 rounded-2xl p-4 text-yellow-300 font-bold" : "bg-emerald-950/50 border border-emerald-700 rounded-2xl p-4 text-emerald-300 font-bold"}>
             {mainGamePlayers.length >= 14
               ? "✅ Lista principal completa: próximos confirmados entram como suplentes."
               : `🟢 Lista aberta: ${Math.max(0, 14 - mainGamePlayers.length)} vaga(s) restantes.`}
+          </div>
+        )}
+
+        {listExpired && (
+          <div className="bg-red-950/50 border border-red-700 rounded-2xl p-4 text-red-300 font-black">
+            ⏰ O prazo da lista encerrou. Aguarde o Admin liberar novamente.
           </div>
         )}
 
@@ -857,19 +913,19 @@ function AppDosAmigosFC() {
         {currentPlayer?.id && (
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-              <Button disabled={!listActive || listLocked} onClick={() => updatePlayerStatus(currentPlayer.id, "jogo")} className="bg-blue-500 text-black disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
+              <Button disabled={!listCanReceiveStatus} onClick={() => updatePlayerStatus(currentPlayer.id, "jogo")} className="bg-blue-500 text-black disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
                 ⚽ Vou no jogo
               </Button>
 
-              <Button disabled={!listActive || listLocked} onClick={() => updatePlayerStatus(currentPlayer.id, "jogo_resenha")} className="bg-emerald-500 text-black disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
+              <Button disabled={!listCanReceiveStatus} onClick={() => updatePlayerStatus(currentPlayer.id, "jogo_resenha")} className="bg-emerald-500 text-black disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
                 🍖⚽ Jogo + Resenha
               </Button>
 
-              <Button disabled={!listActive || listLocked} onClick={() => updatePlayerStatus(currentPlayer.id, "resenha")} className="disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
+              <Button disabled={!listCanReceiveStatus} onClick={() => updatePlayerStatus(currentPlayer.id, "resenha")} className="disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
                 🍖 Só Resenha
               </Button>
 
-              <Button disabled={!listActive || listLocked} onClick={() => updatePlayerStatus(currentPlayer.id, "nao_vou")} className="bg-red-500 text-black disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
+              <Button disabled={!listCanReceiveStatus} onClick={() => updatePlayerStatus(currentPlayer.id, "nao_vou")} className="bg-red-500 text-black disabled:bg-zinc-700 disabled:text-zinc-400 disabled:opacity-100">
                 Não vou
               </Button>
             </div>
@@ -898,7 +954,7 @@ function AppDosAmigosFC() {
 </div>
 <p className="text-xs text-zinc-400 -mt-2">Para criar login, informe e-mail e senha temporária. No primeiro acesso o atleta será obrigado a trocar a senha.</p><div className="grid md:grid-cols-[1fr_auto] gap-3 items-end"><Field label="Buscar jogador"><input className={inputCls} value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)} /></Field><Field label="Filtro"><select className={inputCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="todos">Todos</option>{statusList.map((s) => <option key={s[0]} value={s[0]}>{s[1]}</option>)}</select></Field></div><div className="overflow-x-auto"><table className="w-full text-sm border-separate border-spacing-y-2"><thead className="text-zinc-400"><tr><th className="text-left px-3">#</th><th className="text-left px-3">Nome</th><th className="text-left px-3">Apelido</th><th className="text-left px-3">E-mail</th><th>Nível</th><th>Posição</th><th className="text-right px-3">Ações</th></tr></thead><tbody>{visiblePlayers.length === 0 && <tr><td colSpan="7" className="text-center text-zinc-400 py-8">Nenhum jogador carregado. Clique em “Recarregar jogadores do banco”.</td></tr>}{visiblePlayers.map((p, i) => <tr key={p.id} className="bg-zinc-900 border border-zinc-800"><td className="p-3 rounded-l-xl text-zinc-400 font-bold">{i + 1}</td><td className="p-3 font-bold">{p.name}</td><td className="p-3 font-bold text-emerald-300">{displayName(p)}</td><td className="p-3 text-zinc-400">{p.email || "-"}</td><td className="text-center">{hide ? "•••" : p.level}</td><td className="text-center">{p.position}</td><td className="text-right p-3 rounded-r-xl"><button className="text-blue-300 font-bold mr-3" onClick={() => { setEditId(p.id); setForm({ name: p.name, nickname: p.nickname || "", email: p.email || "", tempPassword: "", level: p.level, position: p.position }); }}>Editar</button>{p.approved === false && <button className="text-emerald-400 font-bold mr-3" onClick={() => approvePlayer(p.id)}>Aprovar</button>}{!(String(p.email || "").toLowerCase() === SUPER_ADMIN_EMAIL && !isSuperAdmin) && <button className="text-yellow-300 font-bold mr-3" onClick={() => setAdminRole(p.id)}>{p.role === "admin" ? "Tirar admin" : "Tornar admin"}</button>}{!(String(p.email || "").toLowerCase() === SUPER_ADMIN_EMAIL && !isSuperAdmin) && <button className="text-red-400 font-bold" onClick={() => askRemovePlayer(p)}>Remover</button>}</td></tr>)}</tbody></table></div></Box>}
 
-  {screen === "newGame" && <div className="grid lg:grid-cols-3 gap-6"><Box title="🆕 Novo jogo"><div className="grid md:grid-cols-2 gap-3"><Field label="Data"><input className={inputCls} type="date" value={gameDate} onChange={(e) => setGameDate(e.target.value)} /></Field><Field label="Horário"><input className={inputCls} type="time" value={gameTime} onChange={(e) => { setGameTime(e.target.value); saveSettings({ gameTime: e.target.value }); }} /></Field><Field label="Local"><input className={inputCls} value={gameLocation} onChange={(e) => { setGameLocation(e.target.value); saveSettings({ gameLocation: e.target.value }); }} /></Field><Field label="Modo de Jogo"><select className={inputCls} value={teamCount} onChange={(e) => { const v = Number(e.target.value); setTeamCount(v); saveSettings({ teamCount: v }); }}><option value={2}>2 times + reservas</option><option value={3} disabled={activeLine.length < 12}>3 times</option></select>{activeLine.length < 12 && <p className="text-xs text-yellow-400 mt-1">3 times libera com 12 jogadores de linha confirmados.</p>}</Field><Field label="Valor por atleta"><input className={inputCls} type="number" value={price} onChange={(e) => { const v = Number(e.target.value || 0); setPrice(v); saveSettings({ price: v }); }} /></Field></div><div className="grid md:grid-cols-3 gap-3">{Array.from({ length: Number(teamCount) }).map((_, i) => <Field key={i} label={`Nome do time ${i + 1}`}><input className={inputCls} value={teamNames[i] || ""} onChange={(e) => { const names = teamNames.map((n, x) => x === i ? e.target.value : n); setTeamNames(names); saveSettings({ teamNames: names }); }} /></Field>)}</div><div className="grid md:grid-cols-3 gap-2"><Button onClick={openList} className="bg-blue-500 text-black w-full">Abrir lista</Button><Button onClick={closeList} className="bg-red-500 text-black w-full">Fechar/Bloquear lista</Button><Button onClick={drawTeams} className="bg-emerald-500 text-black w-full">Sortear times</Button></div></Box><Box title="Resumo"><div className="grid grid-cols-2 gap-3"><StatCard label="Jogo" value={mainGamePlayers.length} /><StatCard label="Resenha" value={mainGamePlayers.filter((p) => p.status === "jogo_resenha").length + resenhaOnly.length} /><StatCard label="Pagantes" value={mainPayers.length} /><StatCard label="Arrecadação" value={money(expected)} /></div></Box></div>}
+  {screen === "newGame" && <div className="grid lg:grid-cols-3 gap-6"><Box title="🆕 Novo jogo"><div className="grid md:grid-cols-2 gap-3"><Field label="Data"><input className={inputCls} type="date" value={gameDate} onChange={(e) => setGameDate(e.target.value)} /></Field><Field label="Horário"><input className={inputCls} type="time" value={gameTime} onChange={(e) => { setGameTime(e.target.value); saveSettings({ gameTime: e.target.value }); }} /></Field><Field label="Local"><input className={inputCls} value={gameLocation} onChange={(e) => { setGameLocation(e.target.value); saveSettings({ gameLocation: e.target.value }); }} /></Field><Field label="Lista aberta até"><input className={inputCls} type="datetime-local" value={listDeadline} onChange={(e) => { setListDeadline(e.target.value); saveSettings({ listDeadline: e.target.value }); }} /></Field><Field label="Modo de Jogo"><select className={inputCls} value={teamCount} onChange={(e) => { const v = Number(e.target.value); setTeamCount(v); saveSettings({ teamCount: v }); }}><option value={2}>2 times + reservas</option><option value={3} disabled={activeLine.length < 12}>3 times</option></select>{activeLine.length < 12 && <p className="text-xs text-yellow-400 mt-1">3 times libera com 12 jogadores de linha confirmados.</p>}</Field><Field label="Valor por atleta"><input className={inputCls} type="number" value={price} onChange={(e) => { const v = Number(e.target.value || 0); setPrice(v); saveSettings({ price: v }); }} /></Field></div><div className="grid md:grid-cols-3 gap-3">{Array.from({ length: Number(teamCount) }).map((_, i) => <Field key={i} label={`Nome do time ${i + 1}`}><input className={inputCls} value={teamNames[i] || ""} onChange={(e) => { const names = teamNames.map((n, x) => x === i ? e.target.value : n); setTeamNames(names); saveSettings({ teamNames: names }); }} /></Field>)}</div><div className="grid md:grid-cols-4 gap-2"><Button onClick={openList} className="bg-blue-500 text-black w-full">Abrir lista</Button><Button onClick={toggleListLock} className={listLocked ? "bg-emerald-500 text-black w-full" : "bg-yellow-500 text-black w-full"}>{listLocked ? "Desbloquear lista" : "Bloquear lista"}</Button><Button onClick={removeList} className="bg-red-500 text-black w-full">Remover lista</Button><Button onClick={drawTeams} className="bg-emerald-500 text-black w-full">Sortear times</Button></div></Box><Box title="Resumo"><div className="grid grid-cols-2 gap-3"><StatCard label="Jogo" value={mainGamePlayers.length} /><StatCard label="Resenha" value={mainGamePlayers.filter((p) => p.status === "jogo_resenha").length + resenhaOnly.length} /><StatCard label="Pagantes" value={mainPayers.length} /><StatCard label="Arrecadação" value={money(expected)} /></div></Box></div>}
 
   {screen === "match" && <div className="space-y-6"><Box title="🔥 Times sorteados">{Array.isArray(teams) ? <><div className={teamCount === 3 ? "grid md:grid-cols-3 gap-3" : "grid md:grid-cols-2 gap-3"}>{teams.map((team, i) => { const tag = teamTag(teamNames[i]); return <div key={i} className="bg-zinc-800 rounded-3xl p-4 border border-zinc-700"><div className="flex justify-between items-center mb-3"><b className="text-xl">{teamNames[i]}</b><span className={`${tag.color} px-3 py-1 rounded-xl font-black`}>{tag.short}</span></div><p className="text-xs text-zinc-400 mb-2">Força: {team.score}</p>{team.players.map((p) => <p key={p.id} className="uppercase text-sm">{displayName(p)} {p.position === "Goleiro" ? "🧤" : ""}</p>)}{team.reserves?.length > 0 && <div className="mt-3 border-t border-zinc-700 pt-2"><p className="text-xs text-yellow-400 font-bold">Reservas</p>{team.reserves.map((p) => <p key={p.id} className="uppercase text-xs text-yellow-300">{displayName(p)}</p>)}</div>}</div>; })}</div>{teamCount === 3 && <div className="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl space-y-3 mt-4"><Button onClick={drawInitialMatch} className="bg-blue-500 text-black w-full">Sortear jogo inicial</Button><div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">{[0, 1].map((slot) => { const idx = initial[slot]; const tag = teamTag(teamNames[idx]); return <div key={slot} className={`h-24 rounded-2xl flex flex-col items-center justify-center font-black shadow-xl ${idx !== undefined ? tag.color : "bg-zinc-800"}`}><span className="text-4xl leading-none">{idx !== undefined ? tag.short : "?"}</span>{idx !== undefined && <small>{teamNames[idx]}</small>}</div>; })}<b className="text-4xl text-white text-center">X</b></div></div>}</> : <p className="text-zinc-400">Nenhum time sorteado ainda.</p>}</Box>{Array.isArray(teams) && <Box title="⚽ Partidas"><div className="flex justify-between gap-3 flex-wrap"><p className="text-zinc-400">Lance placar, gols e assistências.</p><Button onClick={() => setGames((prev) => [...prev, { id: String(Date.now()), a: 0, b: 1, sa: 0, sb: 0, goals: [], assists: [], fa: "", fb: "", aa: "", ab: "", ca: false, cb: false }])} className="bg-emerald-500 text-black">+ Gerar jogo</Button></div>{games.map((game) => <div key={game.id} className="bg-gradient-to-br from-zinc-950 to-zinc-900 border border-zinc-800 p-5 rounded-3xl space-y-5 shadow-2xl"><div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end"><Field label="Time 1"><select className={inputCls} value={game.a} onChange={(e) => updateGame(game.id, { a: Number(e.target.value) })}>{teams.map((_, i) => <option key={i} value={i}>{teamNames[i]}</option>)}</select></Field><Field label="Gols"><input className={`${inputCls} text-5xl text-center font-black`} type="number" value={game.sa} onChange={(e) => updateGame(game.id, { sa: Number(e.target.value || 0) })} /></Field><b className="text-center text-5xl text-emerald-400">X</b><Field label="Gols"><input className={`${inputCls} text-5xl text-center font-black`} type="number" value={game.sb} onChange={(e) => updateGame(game.id, { sb: Number(e.target.value || 0) })} /></Field><Field label="Time 2"><select className={inputCls} value={game.b} onChange={(e) => updateGame(game.id, { b: Number(e.target.value) })}>{teams.map((_, i) => <option key={i} value={i}>{teamNames[i]}</option>)}</select></Field></div><div className="grid md:grid-cols-2 gap-4">{renderSide(game, 0)}{renderSide(game, 1)}</div></div>)}<div className="grid md:grid-cols-[1fr_auto_auto] gap-3 items-end"><Field label="Craque do jogo"><select className={inputCls} value={mvp} onChange={(e) => setMvp(e.target.value)}><option value="">Selecione</option>{mainGamePlayers.map((p) => <option key={p.id} value={p.name}>{displayName(p)}</option>)}</select></Field><Button onClick={autoMvp} className="bg-emerald-500 text-black">MVP automático</Button><Button onClick={() => setShowMvpCalc(true)} className="bg-blue-500 text-black">Ver cálculo MVP</Button></div></Box>}</div>}
 
