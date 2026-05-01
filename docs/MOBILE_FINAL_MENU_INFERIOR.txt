@@ -1,0 +1,11 @@
+Versão 4.7.0 — Mobile Final com menu inferior
+
+Alterações:
+- Removido menu superior problemático.
+- Criado menu inferior fixo estilo app nativo.
+- Admin: Início, Jogadores, Times, Caixa, Segurança.
+- Atleta: Início, Lista, Ranking, Caixa.
+- Topo limpo: logo, status, notificações, modo e sair.
+- Conteúdo com padding inferior para não ficar escondido atrás do menu.
+- Overflow horizontal bloqueado no mobile.
+- Mantido sistema de notificações no sino.
