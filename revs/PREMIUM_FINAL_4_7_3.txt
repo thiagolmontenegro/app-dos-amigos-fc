@@ -1,0 +1,7 @@
+Versão 4.7.3 — Premium final
+
+- Caixa: saldo visível calculado somente a partir das movimentações reais.
+- Sem movimentação no caixa = R$ 0,00.
+- Remover lançamento recalcula saldo com lançamentos restantes.
+- Cards de jogadores/permissões mais premium, com botões menores e proporcionais.
+- Logs seguem gravando, mas não aparecem na tela.
