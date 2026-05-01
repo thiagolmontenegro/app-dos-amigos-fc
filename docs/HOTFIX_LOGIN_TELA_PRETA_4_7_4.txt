@@ -1,8 +1,0 @@
-Versão 4.7.4 — Hotfix premium
-
-Correções:
-- Login agora mostra opção "Lembrar e-mail neste aparelho".
-- Salva somente e-mail, nunca senha.
-- Adicionado ErrorBoundary para impedir tela preta.
-- Se houver erro após login, o app mostra mensagem e botão Recarregar.
-- Ajustes de segurança para notificações e estado visual.
