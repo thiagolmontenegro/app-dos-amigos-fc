@@ -1,7 +1,0 @@
-Versão 4.6.6:
-- Removido o nome do app do topo para não conflitar com ícones.
-- Header agora mostra apenas logo, status e ícones.
-- Menu mobile não é mais arrastável.
-- Opções ficam fixas em 5 colunas: Início, Jogadores, Times, Caixa, Segurança.
-- Corrigido problema do menu voltando sozinho para a direita.
-- Bloqueado overflow horizontal no body/root.
