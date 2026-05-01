@@ -1,0 +1,8 @@
+Versão 4.7.5 — Hotfix final
+
+Correções:
+- Removida constante de saldo que causava "Cannot access before initialization".
+- Saldo do caixa agora é calculado por função segura getVisibleCashBalance().
+- Login força exibição da opção "Lembrar e-mail neste aparelho".
+- E-mail salvo apenas em localStorage; senha nunca é salva.
+- Mantida proteção contra tela preta.
