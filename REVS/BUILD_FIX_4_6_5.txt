@@ -1,0 +1,9 @@
+Versão 4.6.5:
+- Reconstruída em cima da base estável Fase PRO 5.
+- Corrigido erro de build Unexpected }.
+- Header premium aplicado de forma segura.
+- Nome do app sem quebrar linha.
+- Ícones superiores conforme solicitado.
+- Navegação horizontal premium: Início, Jogadores, Times, Caixa, Segurança.
+- Notificações em modal com abas clicáveis.
+- Login com "Lembrar meus dados" apenas.

@@ -1,0 +1,4 @@
+Versão 4.7.2:
+- Corrigido erro de build: await fora de função async.
+- Função deleteCashMovement reconstruída corretamente.
+- Mantém cards premium, menu inferior e saldo do caixa recalculando ao remover lançamento.
