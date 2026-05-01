@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  min-height: 100%;
+  background: #09090b;
+}
+
+body {
+  margin: 0;
+}
+
+.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+
+html,body,#root{max-width:100%;overflow-x:hidden;}
+
+
+html,body,#root{max-width:100%;overflow-x:hidden;background:#000;}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+*{box-sizing:border-box}
+
+
+
+html,body,#root{max-width:100%;overflow-x:hidden;background:#000;}
+table{max-width:100%;}
+input,select,textarea,button{max-width:100%;}
+
