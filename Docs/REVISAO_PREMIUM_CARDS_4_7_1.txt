@@ -1,9 +1,0 @@
-Versão 4.7.1 — revisão premium de layout
-
-Alterações:
-- Tela Jogadores deixou de usar tabela no mobile; agora usa cards premium.
-- Tela Segurança deixou de usar tabela com scroll horizontal; agora usa cards premium.
-- Logs de auditoria continuam gravando, mas não aparecem mais na tela.
-- Botões Admin, Financeiro, Aprovar, Editar e Remover viraram ações premium.
-- Caixa: ao remover lançamento, o saldo é recalculado e salvo em settings.cash_balance.
-- Redução de overflow horizontal em celulares.
